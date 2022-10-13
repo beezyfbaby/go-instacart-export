@@ -27,7 +27,7 @@ func (c *Client) getPage(page int) OrdersResponse {
 	req.Header.Set("Referer", "https://www.instacart.com/store/account/orders")
 	req.Header.Set("Accept-Language", "en-US,en;q=0.9")
 
-	cookie := "_instacart_session=" + c.SessionToken + ";"
+	cookie := "_instacart_session_id=" + c.SessionToken + ";"
 	req.Header.Set("Cookie", cookie)
 
 	resp, err := http.DefaultClient.Do(req)

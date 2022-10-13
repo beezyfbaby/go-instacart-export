@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-import instacart "github.com/grocky/go-instacart-export"
+import instacart "github.com/beezyfbaby/go-instacart-export"
 
 func main() {
 	sessionToken := os.Getenv("INSTACART_SESSION_TOKEN")

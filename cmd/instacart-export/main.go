@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/csv"
+	"errors"
 	"log"
 	"os"
 	"strconv"
@@ -66,7 +67,13 @@ func extractOrdersData(orders []*instacart.Order) [][]string {
 
 func writeToCSV(data [][]string) {
 	log.Print("Writing orders to a CSV")
-
+	path := "data"
+	if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
+		err := os.Mkdir(path, os.ModePerm)
+		if err != nil {
+			log.Fatal("Unable to create directory", err)
+		}
+	}
 	now := time.Now()
 	file, err := os.Create("data/instacart_orders_" + now.Format("01-02-2006_03-04-05") + ".csv")
 	if err != nil {

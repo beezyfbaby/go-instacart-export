@@ -1,3 +1,3 @@
 module github.com/beezyfbaby/go-instacart-export
 
-go 1.14
+go 1.18

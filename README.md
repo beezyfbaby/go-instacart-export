@@ -31,7 +31,7 @@ You'll need to log into the Instacart web app and get your session token. The to
 Install the binary with the following
 
 ```shell
-go get -u github.com/grocky/go-instacart-export/...
+go get -u github.com/beezyfbaby/go-instacart-export/...
 ```
 
 ## Usage

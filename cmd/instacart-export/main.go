@@ -9,8 +9,6 @@ import (
 	"time"
 
 	instacart "github.com/beezyfbaby/go-instacart-export"
-
-	instacart "github.com/beezyfbaby/go-instacart-export"
 )
 
 func main() {

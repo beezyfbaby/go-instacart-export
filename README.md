@@ -24,14 +24,14 @@ has been spent on various categories make it easy to import.
 
 This tool was created quick and dirty. It's rough, really rough. It works for my purposes, but your mileage may vary.
 
-You'll need to log into the Instacart web app and get your session token. The token is in the `_instacart_session` cookie.
+You'll need to log into the Instacart web app and get your session token. The token is in the `_instacart_session_id` cookie.
 
 ![dev tools screenshot](./docs/devtools-token.png)
 
 Install the binary with the following
 
 ```shell
-go get -u github.com/grocky/go-instacart-export/...
+go get -u github.com/beezyfbaby/go-instacart-export/...
 ```
 
 ## Usage

@@ -7,9 +7,9 @@ import (
 	"strconv"
 	"strings"
 	"time"
-)
 
-import instacart "github.com/grocky/go-instacart-export"
+	instacart "github.com/beezyfbaby/go-instacart-export"
+)
 
 func main() {
 	sessionToken := os.Getenv("INSTACART_SESSION_TOKEN")
@@ -34,7 +34,7 @@ func extractOrdersData(orders []*instacart.Order) [][]string {
 	log.Print("Processing orders")
 	data := [][]string{{
 		"id",
-		"satus",
+		"status",
 		"total",
 		"createdAt",
 		"retailers",

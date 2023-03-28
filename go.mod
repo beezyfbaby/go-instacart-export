@@ -1,3 +1,3 @@
-module github.com/grocky/go-instacart-export
+module github.com/beezyfbaby/go-instacart-export
 
 go 1.14

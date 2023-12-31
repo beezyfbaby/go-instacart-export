@@ -132,7 +132,7 @@ type OrdersResponse struct {
 				Qty  float32 `json:"qty"`
 				Item struct {
 					ID                      string      `json:"id"`
-					LegacyID                StringInt   `json:"legacy_id"`
+					LegacyID                int         `json:"legacy_id"`
 					ProductID               string      `json:"product_id"`
 					Name                    string      `json:"name"`
 					Attributes              []string    `json:"attributes"`

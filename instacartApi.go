@@ -93,7 +93,7 @@ func (c *Client) getPage(page int) OrdersResponse {
 type OrdersResponse struct {
 	Orders []struct {
 		ID        string  `json:"id"`
-		LegacyID  int     `json:"legacy_id,string"`
+		LegacyID  int     `json:"legacy_id"`
 		Status    string  `json:"status"`
 		Rating    float32 `json:"rating"`
 		Total     string  `json:"total"`

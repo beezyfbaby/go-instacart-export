@@ -18,11 +18,11 @@ func (st *StringInt) UnmarshalJSON(b []byte) error {
 	//this will help us check the type of our value
 	//if it is a string that can be converted into an int we convert it
 	///otherwise we return an error
-	var item interface{}
-	if err := json.Unmarshal(b, &item); err != nil {
+	var orders interface{}
+	if err := json.Unmarshal(b, &orders); err != nil {
 		return err
 	}
-	switch v := item.(type) {
+	switch v := orders.(type) {
 	case int:
 		*st = StringInt(v)
 	case float64:

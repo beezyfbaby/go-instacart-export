@@ -7,6 +7,42 @@ import (
 	"strconv"
 )
 
+// StringInt create a type alias for type int
+type StringInt int
+
+// UnmarshalJSON create a custom unmarshal for the StringInt
+/// this helps us check the type of our value before unmarshalling it
+
+func (st *StringInt) UnmarshalJSON(b []byte) error {
+	//convert the bytes into an interface
+	//this will help us check the type of our value
+	//if it is a string that can be converted into an int we convert it
+	///otherwise we return an error
+	var item interface{}
+	if err := json.Unmarshal(b, &item); err != nil {
+		return err
+	}
+	switch v := item.(type) {
+	case int:
+		*st = StringInt(v)
+	case float64:
+		*st = StringInt(int(v))
+	case string:
+		///here convert the string into
+		///an integer
+		i, err := strconv.Atoi(v)
+		if err != nil {
+			///the string might not be of integer type
+			///so return an error
+			return err
+
+		}
+		*st = StringInt(i)
+
+	}
+	return nil
+}
+
 // Client is the HTTP client for the Instacart orders API
 type Client struct {
 	SessionToken string
@@ -56,12 +92,12 @@ func (c *Client) getPage(page int) OrdersResponse {
 //   - Updated .orders.rating to be float
 type OrdersResponse struct {
 	Orders []struct {
-		ID        string  `json:"id"`
-		LegacyID  int     `json:"legacy_id"`
-		Status    string  `json:"status"`
-		Rating    float32 `json:"rating"`
-		Total     string  `json:"total"`
-		CreatedAt string  `json:"created_at"`
+		ID        string    `json:"id"`
+		LegacyID  StringInt `json:"legacy_id"`
+		Status    string    `json:"status"`
+		Rating    float32   `json:"rating"`
+		Total     string    `json:"total"`
+		CreatedAt string    `json:"created_at"`
 		Actions   map[string]struct {
 			Label           string `json:"label"`
 			InProgressLabel string `json:"in_progress_label"`
@@ -96,7 +132,7 @@ type OrdersResponse struct {
 				Qty  float32 `json:"qty"`
 				Item struct {
 					ID                      string      `json:"id"`
-					LegacyID                string      `json:"legacy_id"`
+					LegacyID                StringInt   `json:"legacy_id"`
 					ProductID               string      `json:"product_id"`
 					Name                    string      `json:"name"`
 					Attributes              []string    `json:"attributes"`

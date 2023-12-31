@@ -70,7 +70,7 @@ type OrdersResponse struct {
 		} `json:"actions"`
 		OrderDeliveries []struct {
 			ID          string `json:"id"`
-			OrderID     string `json:"order_id"`
+			OrderID     int    `json:"order_id"`
 			Description string `json:"description"`
 			Base62ID    string `json:"base62_id"`
 			Status      string `json:"status"`

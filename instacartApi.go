@@ -57,6 +57,7 @@ func (c *Client) getPage(page int) OrdersResponse {
 type OrdersResponse struct {
 	Orders []struct {
 		ID        string  `json:"id"`
+		LegacyID  string  `json:"legacy_id"`
 		Status    string  `json:"status"`
 		Rating    float32 `json:"rating"`
 		Total     string  `json:"total"`
@@ -95,6 +96,7 @@ type OrdersResponse struct {
 				Qty  float32 `json:"qty"`
 				Item struct {
 					ID                      string      `json:"id"`
+					LegacyID                string      `json:"legacy_id"`
 					ProductID               string      `json:"product_id"`
 					Name                    string      `json:"name"`
 					Attributes              []string    `json:"attributes"`

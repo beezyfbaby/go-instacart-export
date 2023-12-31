@@ -2,7 +2,7 @@ package instacart
 
 import "time"
 
-// Item represents a purchased item in teh delivery.
+// Item represents a purchased item in the delivery.
 type Item struct {
 	ID        string
 	ProductID string

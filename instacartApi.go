@@ -92,12 +92,12 @@ func (c *Client) getPage(page int) OrdersResponse {
 //   - Updated .orders.rating to be float
 type OrdersResponse struct {
 	Orders []struct {
-		ID        string    `json:"id"`
-		LegacyID  StringInt `json:"legacy_id"`
-		Status    string    `json:"status"`
-		Rating    float32   `json:"rating"`
-		Total     string    `json:"total"`
-		CreatedAt string    `json:"created_at"`
+		ID        string  `json:"id"`
+		LegacyID  int     `json:"legacy_id,string"`
+		Status    string  `json:"status"`
+		Rating    float32 `json:"rating"`
+		Total     string  `json:"total"`
+		CreatedAt string  `json:"created_at"`
 		Actions   map[string]struct {
 			Label           string `json:"label"`
 			InProgressLabel string `json:"in_progress_label"`

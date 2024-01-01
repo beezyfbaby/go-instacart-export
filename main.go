@@ -70,7 +70,7 @@ func FetchOrders(client Client) []*Order {
 		log.Printf("Fetching page: %d", *nextPage)
 		resp = client.getPage(*nextPage)
 		orders = append(orders, extractOrders(resp)...)
-		nextPage = resp.Meta.Pagination.NextPage
+		*nextPage = resp.Meta.Pagination.NextPage
 	}
 
 	sort.Sort(sortOrderByDate{orders})

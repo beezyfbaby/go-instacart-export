@@ -234,10 +234,10 @@ type OrdersResponse struct {
 	} `json:"orders,omitempty"`
 	Meta struct {
 		Pagination struct {
-			Total    int `json:"total,omitempty"`
-			PerPage  int `json:"per_page,omitempty"`
-			Page     int `json:"page,omitempty"`
-			NextPage int `json:"next_page,omitempty"`
-		} `json:"pagination,omitempty"`
-	} `json:"meta,omitempty"`
+			Total    int `json:"total"`
+			PerPage  int `json:"per_page"`
+			Page     int `json:"page"`
+			NextPage int `json:"next_page"`
+		} `json:"pagination"`
+	} `json:"meta"`
 }

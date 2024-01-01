@@ -56,134 +56,188 @@ func (c *Client) getPage(page int) OrdersResponse {
 //   - Updated .orders.rating to be float
 type OrdersResponse struct {
 	Orders []struct {
-		ID        string  `json:"id"`
-		LegacyID  string  `json:"legacy_id"`
-		Status    string  `json:"status"`
-		Rating    float32 `json:"rating"`
-		Total     string  `json:"total"`
-		CreatedAt string  `json:"created_at"`
-		Actions   map[string]struct {
-			Label           string `json:"label"`
-			InProgressLabel string `json:"in_progress_label"`
-			OrderUUID       string `json:"order_uuid"`
-			SourceType      string `json:"source_type"`
-		} `json:"actions"`
+		ID        string `json:"id,omitempty"`
+		LegacyID  string `json:"legacy_id,omitempty"`
+		Status    string `json:"status,omitempty"`
+		Rating    any    `json:"rating,omitempty"`
+		Total     string `json:"total,omitempty"`
+		CreatedAt string `json:"created_at,omitempty"`
+		Actions   struct {
+			AddAllItemsToCart struct {
+				Label           string `json:"label,omitempty"`
+				InProgressLabel string `json:"in_progress_label,omitempty"`
+				OrderUUID       string `json:"order_uuid,omitempty"`
+				SourceType      string `json:"source_type,omitempty"`
+			} `json:"add_all_items_to_cart,omitempty"`
+			Rating struct {
+				URL   string `json:"url,omitempty"`
+				Label string `json:"label,omitempty"`
+			} `json:"rating,omitempty"`
+			ReportProblem struct {
+				URL   string `json:"url,omitempty"`
+				Label string `json:"label,omitempty"`
+			} `json:"report_problem,omitempty"`
+		} `json:"actions,omitempty"`
 		OrderDeliveries []struct {
-			ID          string `json:"id"`
-			OrderID     int    `json:"order_id"`
-			Description string `json:"description"`
-			Base62ID    string `json:"base62_id"`
-			Status      string `json:"status"`
-			DeliveredAt string `json:"delivered_at"`
+			ID          string `json:"id,omitempty"`
+			OrderID     string `json:"order_id,omitempty"`
+			Description string `json:"description,omitempty"`
+			Base62ID    string `json:"base62_id,omitempty"`
+			Status      string `json:"status,omitempty"`
+			DeliveredAt string `json:"delivered_at,omitempty"`
 			Retailer    struct {
-				ID   string `json:"id"`
-				Name string `json:"name"`
-				Slug string `json:"slug"`
+				ID   string `json:"id,omitempty"`
+				Name string `json:"name,omitempty"`
+				Slug string `json:"slug,omitempty"`
 				Logo struct {
-					URL        string `json:"url"`
-					Alt        string `json:"alt"`
+					URL        string `json:"url,omitempty"`
+					Alt        string `json:"alt,omitempty"`
 					Responsive struct {
-						Template string `json:"template"`
+						Template string `json:"template,omitempty"`
 						Defaults struct {
-							Width int `json:"width"`
-						} `json:"defaults"`
-					} `json:"responsive"`
-					Sizes []interface{} `json:"sizes"`
-				} `json:"logo"`
-				BackgroundColor string `json:"background_color"`
-			} `json:"retailer"`
+							Width int `json:"width,omitempty"`
+						} `json:"defaults,omitempty"`
+					} `json:"responsive,omitempty"`
+					Sizes []any `json:"sizes,omitempty"`
+				} `json:"logo,omitempty"`
+				BackgroundColor string `json:"background_color,omitempty"`
+			} `json:"retailer,omitempty"`
 			OrderItems []struct {
-				Qty  float32 `json:"qty"`
+				Qty  float64 `json:"qty,omitempty"`
 				Item struct {
-					ID                      string      `json:"id"`
-					LegacyID                int         `json:"legacy_id"`
-					ProductID               string      `json:"product_id"`
-					Name                    string      `json:"name"`
-					Attributes              []string    `json:"attributes"`
-					PriceAffix              interface{} `json:"price_affix"`
-					PriceAffixAria          interface{} `json:"price_affix_aria"`
-					SecondaryPriceAffix     string      `json:"secondary_price_affix"`
-					SecondaryPriceAffixAria string      `json:"secondary_price_affix_aria"`
-					Size                    string      `json:"size"`
-					SizeAria                string      `json:"size_aria"`
+					ID                      string   `json:"id,omitempty"`
+					LegacyID                int      `json:"legacy_id,omitempty"`
+					ProductID               string   `json:"product_id,omitempty"`
+					Name                    string   `json:"name,omitempty"`
+					Attributes              []string `json:"attributes,omitempty"`
+					EbtAttributes           any      `json:"ebt_attributes,omitempty"`
+					ShowFullBleedImage      any      `json:"show_full_bleed_image,omitempty"`
+					PriceAffix              any      `json:"price_affix,omitempty"`
+					PriceAffixAria          any      `json:"price_affix_aria,omitempty"`
+					SecondaryPriceAffix     string   `json:"secondary_price_affix,omitempty"`
+					SecondaryPriceAffixAria string   `json:"secondary_price_affix_aria,omitempty"`
+					Size                    string   `json:"size,omitempty"`
+					SizeAria                string   `json:"size_aria,omitempty"`
 					ImageList               []struct {
-						URL        string `json:"url"`
-						Alt        string `json:"alt"`
+						URL        string `json:"url,omitempty"`
+						Alt        string `json:"alt,omitempty"`
 						Responsive struct {
-							Template string `json:"template"`
+							Template string `json:"template,omitempty"`
 							Defaults struct {
-								Width  int    `json:"width"`
-								Fill   string `json:"fill"`
-								Format string `json:"format"`
-							} `json:"defaults"`
-						} `json:"responsive"`
-						Sizes []interface{} `json:"sizes"`
-					} `json:"image_list"`
+								Width  int    `json:"width,omitempty"`
+								Fill   string `json:"fill,omitempty"`
+								Format string `json:"format,omitempty"`
+							} `json:"defaults,omitempty"`
+						} `json:"responsive,omitempty"`
+						Sizes []any `json:"sizes,omitempty"`
+					} `json:"image_list,omitempty"`
 					Image struct {
-						URL        string `json:"url"`
-						Alt        string `json:"alt"`
+						URL        string `json:"url,omitempty"`
+						Alt        string `json:"alt,omitempty"`
 						Responsive struct {
-							Template string `json:"template"`
+							Template string `json:"template,omitempty"`
 							Defaults struct {
-								Width  int    `json:"width"`
-								Fill   string `json:"fill"`
-								Format string `json:"format"`
-							} `json:"defaults"`
-						} `json:"responsive"`
-						Sizes []interface{} `json:"sizes"`
-					} `json:"image"`
-					VariableAttributesMap interface{} `json:"variable_attributes_map"`
-					ClickAction           struct {
-						Type string `json:"type"`
+								Width  int    `json:"width,omitempty"`
+								Fill   string `json:"fill,omitempty"`
+								Format string `json:"format,omitempty"`
+							} `json:"defaults,omitempty"`
+						} `json:"responsive,omitempty"`
+						Sizes []any `json:"sizes,omitempty"`
+					} `json:"image,omitempty"`
+					WeightsAndMeasuresV2Enabled any `json:"weights_and_measures_v2_enabled,omitempty"`
+					VariableAttributesMap       any `json:"variable_attributes_map,omitempty"`
+					ProductPagePath             any `json:"product_page_path,omitempty"`
+					ClickAction                 struct {
+						Type string `json:"type,omitempty"`
 						Data struct {
 							Container struct {
-								Title            string        `json:"title"`
-								Path             string        `json:"path"`
-								InitialStep      interface{}   `json:"initial_step"`
-								Modules          []interface{} `json:"modules"`
-								DataDependencies []interface{} `json:"data_dependencies"`
-							} `json:"container"`
+								Title            string `json:"title,omitempty"`
+								Path             string `json:"path,omitempty"`
+								InitialStep      any    `json:"initial_step,omitempty"`
+								Modules          []any  `json:"modules,omitempty"`
+								DataDependencies []any  `json:"data_dependencies,omitempty"`
+							} `json:"container,omitempty"`
 							TrackingParams struct {
-							} `json:"tracking_params"`
+							} `json:"tracking_params,omitempty"`
 							TrackingEventNames struct {
-							} `json:"tracking_event_names"`
-						} `json:"data"`
-					} `json:"click_action"`
-					WineRatingBadge interface{} `json:"wine_rating_badge"`
-					Weekly          interface{} `json:"weekly"`
-					WeeklyOrderID   interface{} `json:"weekly_order_id"`
+							} `json:"tracking_event_names,omitempty"`
+						} `json:"data,omitempty"`
+					} `json:"click_action,omitempty"`
+					WineRatingBadge any    `json:"wine_rating_badge,omitempty"`
+					Weekly          any    `json:"weekly,omitempty"`
+					WeeklyOrderID   any    `json:"weekly_order_id,omitempty"`
+					V4ItemID        string `json:"v4_item_id,omitempty"`
 					QtyAttributes   struct {
-						Initial          int         `json:"initial"`
-						Increment        float32     `json:"increment"`
-						Min              float32     `json:"min"`
-						Max              float32     `json:"max"`
-						Unit             interface{} `json:"unit"`
-						UnitAria         interface{} `json:"unit_aria"`
-						MaxReachedLabel  string      `json:"max_reached_label"`
-						MinReachedLabel  interface{} `json:"min_reached_label"`
-						MinWeightExp     bool        `json:"min_weight_exp"`
-						Editable         bool        `json:"editable"`
-						QtyEnforcedLabel interface{} `json:"qty_enforced_label"`
-						Select           struct {
-							Options       []float32 `json:"options"`
-							DefaultOption int       `json:"default_option"`
+						Initial                  int    `json:"initial,omitempty"`
+						Increment                int    `json:"increment,omitempty"`
+						Min                      int    `json:"min,omitempty"`
+						Max                      int    `json:"max,omitempty"`
+						Unit                     any    `json:"unit,omitempty"`
+						UnitAria                 any    `json:"unit_aria,omitempty"`
+						MaxReachedLabel          string `json:"max_reached_label,omitempty"`
+						MinReachedLabel          any    `json:"min_reached_label,omitempty"`
+						MinWeightExp             bool   `json:"min_weight_exp,omitempty"`
+						HideUnitStepperIcon      bool   `json:"hide_unit_stepper_icon,omitempty"`
+						QuantityType             any    `json:"quantity_type,omitempty"`
+						Editable                 bool   `json:"editable,omitempty"`
+						QtyEnforcedLabel         any    `json:"qty_enforced_label,omitempty"`
+						VariableWeightDisclaimer any    `json:"variable_weight_disclaimer,omitempty"`
+						Select                   struct {
+							Options       []int `json:"options,omitempty"`
+							DefaultOption int   `json:"default_option,omitempty"`
 							CustomOption  struct {
-								Label string `json:"label"`
-							} `json:"custom_option"`
-						} `json:"select"`
-					} `json:"qty_attributes"`
-					QtyAttributesPerUnit        interface{} `json:"qty_attributes_per_unit"`
-					DeliveryPromotionAttributes interface{} `json:"delivery_promotion_attributes"`
-				} `json:"item"`
-			} `json:"order_items"`
-		} `json:"order_deliveries"`
-	} `json:"orders"`
+								Label string `json:"label,omitempty"`
+							} `json:"custom_option,omitempty"`
+						} `json:"select,omitempty"`
+					} `json:"qty_attributes,omitempty"`
+					QtyAttributesPerUnit        any `json:"qty_attributes_per_unit,omitempty"`
+					DeliveryPromotionAttributes any `json:"delivery_promotion_attributes,omitempty"`
+				} `json:"item,omitempty"`
+			} `json:"order_items,omitempty"`
+		} `json:"order_deliveries,omitempty"`
+		Actions0 struct {
+			AddAllItemsToCart struct {
+				Label           string `json:"label,omitempty"`
+				InProgressLabel string `json:"in_progress_label,omitempty"`
+				OrderUUID       string `json:"order_uuid,omitempty"`
+				SourceType      string `json:"source_type,omitempty"`
+			} `json:"add_all_items_to_cart,omitempty"`
+			Rating struct {
+				URL   string `json:"url,omitempty"`
+				Label string `json:"label,omitempty"`
+			} `json:"rating,omitempty"`
+		} `json:"actions,omitempty"`
+		Actions1 struct {
+			AddAllItemsToCart struct {
+				Label           string `json:"label,omitempty"`
+				InProgressLabel string `json:"in_progress_label,omitempty"`
+				OrderUUID       string `json:"order_uuid,omitempty"`
+				SourceType      string `json:"source_type,omitempty"`
+			} `json:"add_all_items_to_cart,omitempty"`
+			Rating struct {
+				URL   string `json:"url,omitempty"`
+				Label string `json:"label,omitempty"`
+			} `json:"rating,omitempty"`
+		} `json:"actions,omitempty"`
+		Actions2 struct {
+			AddAllItemsToCart struct {
+				Label           string `json:"label,omitempty"`
+				InProgressLabel string `json:"in_progress_label,omitempty"`
+				OrderUUID       string `json:"order_uuid,omitempty"`
+				SourceType      string `json:"source_type,omitempty"`
+			} `json:"add_all_items_to_cart,omitempty"`
+			Rating struct {
+				URL   string `json:"url,omitempty"`
+				Label string `json:"label,omitempty"`
+			} `json:"rating,omitempty"`
+		} `json:"actions,omitempty"`
+	} `json:"orders,omitempty"`
 	Meta struct {
 		Pagination struct {
-			Total    int  `json:"total"`
-			PerPage  int  `json:"per_page"`
-			Page     int  `json:"page"`
-			NextPage *int `json:"next_page"`
-		} `json:"pagination"`
-	} `json:"meta"`
+			Total    int `json:"total,omitempty"`
+			PerPage  int `json:"per_page,omitempty"`
+			Page     int `json:"page,omitempty"`
+			NextPage int `json:"next_page,omitempty"`
+		} `json:"pagination,omitempty"`
+	} `json:"meta,omitempty"`
 }

@@ -77,7 +77,7 @@ type OrdersResponse struct {
 				URL   string `json:"url"`
 				Label string `json:"label"`
 			} `json:"report_problem"`
-		} `json:"actions,omitempty"`
+		} `json:"actions"`
 		OrderDeliveries []struct {
 			ID          string `json:"id"`
 			OrderID     string `json:"order_id"`

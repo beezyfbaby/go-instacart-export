@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	instacart "github.com/beezyfbaby/go-instacart-export"
+	"github.com/beezyfbaby/go-instacart-export"
 )
 
 // StringInt create a type alias for type int

@@ -1,207 +1,110 @@
 package instacart
 
 import (
+	"context"
 	"encoding/json"
-	"log"
+	"fmt"
+	"io"
 	"net/http"
 	"strconv"
+	"time"
 )
 
-// Client is the HTTP client for the Instacart orders API
+// Client reads the undocumented consumer website API, not the Developer Platform API.
+// SessionToken is the value of the _instacart_session_id cookie. Never log it.
 type Client struct {
 	SessionToken string
+	// HTTPClient optionally supplies a transport. Redirects are always rejected.
+	HTTPClient *http.Client
 }
 
-func (c *Client) getPage(page int) OrdersResponse {
-
-	req, err := http.NewRequest("GET", "https://www.instacart.com/v3/orders?page="+strconv.Itoa(page), nil)
-	if err != nil {
-		log.Fatal(err)
+func (c *Client) getPage(ctx context.Context, page int) (OrdersResponse, error) {
+	var result OrdersResponse
+	cookie := &http.Cookie{Name: "_instacart_session_id", Value: c.SessionToken}
+	if c.SessionToken == "" {
+		return result, fmt.Errorf("INSTACART_SESSION_TOKEN is required")
 	}
-	req.Header.Set("Authority", "www.instacart.com")
+	if err := cookie.Valid(); err != nil {
+		return result, fmt.Errorf("invalid session cookie value")
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://www.instacart.com/v3/orders?page="+strconv.Itoa(page), nil)
+	if err != nil {
+		return result, err
+	}
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("X-Client-Identifier", "web")
-	req.Header.Set("User-Agent", "Instacart Orders To CSV Client")
-	req.Header.Set("Dnt", "1")
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("User-Agent", "instacart-export")
 	req.Header.Set("Referer", "https://www.instacart.com/store/account/orders")
-	req.Header.Set("Accept-Language", "en-US,en;q=0.9")
-
-	cookie := "_instacart_session_id=" + c.SessionToken + ";"
-	req.Header.Set("Cookie", cookie)
-
-	resp, err := http.DefaultClient.Do(req)
+	req.AddCookie(cookie)
+	client := http.Client{Timeout: 30 * time.Second}
+	if c.HTTPClient != nil {
+		client = *c.HTTPClient
+	}
+	if client.Timeout <= 0 {
+		client.Timeout = 30 * time.Second
+	}
+	client.CheckRedirect = func(_ *http.Request, _ []*http.Request) error { return http.ErrUseLastResponse }
+	resp, err := client.Do(req)
 	if err != nil {
-		log.Fatal(err)
+		return result, fmt.Errorf("request orders page: %w", err)
 	}
 	defer resp.Body.Close()
-
-	var ordersResp OrdersResponse
-
-	if err := json.NewDecoder(resp.Body).Decode(&ordersResp); err != nil {
-		log.Fatal(err)
+	switch resp.StatusCode {
+	case http.StatusOK:
+	case http.StatusUnauthorized, http.StatusForbidden:
+		return result, fmt.Errorf("HTTP %d: session expired or access blocked; sign in normally and refresh your session cookie", resp.StatusCode)
+	case http.StatusTooManyRequests:
+		return result, fmt.Errorf("HTTP 429: rate limited; wait before running again (Retry-After: %q)", resp.Header.Get("Retry-After"))
+	default:
+		return result, fmt.Errorf("HTTP %d: consumer orders endpoint unavailable or changed", resp.StatusCode)
 	}
-
-	return ordersResp
+	const limit = 16 << 20
+	body, err := io.ReadAll(io.LimitReader(resp.Body, limit+1))
+	if err != nil {
+		return result, fmt.Errorf("read orders: %w", err)
+	}
+	if len(body) > limit {
+		return result, fmt.Errorf("orders response exceeds 16 MiB")
+	}
+	if err := json.Unmarshal(body, &result); err != nil {
+		return result, fmt.Errorf("unexpected orders JSON; consumer API may have changed: %w", err)
+	}
+	if result.Orders == nil || result.Meta.Pagination == nil || result.Meta.Pagination.NextPage == nil {
+		return result, fmt.Errorf("missing orders or pagination fields; consumer API may have changed")
+	}
+	return result, nil
 }
 
-// OrdersResponse is the response from the orders API
-// auto-generated from: https://mholt.github.io/json-to-go/
-//   - Updated Actions to be map[string]struct
-//   - Updated .orders.order_deliveries.order_items.qty to be float
-//   - Updated .orders.order_deliveries.order_items.item.qty_attributes.increment  to be float
-//   - Updated .orders.order_deliveries.order_items.item.qty_attributes.min  to be float
-//   - Updated .orders.order_deliveries.order_items.item.qty_attributes.max  to be float
-//   - Updated .orders.order_deliveries.order_items.item.qty_attributes.select.options to be float
-//   - Updated .orders.rating to be float
+// OrdersResponse contains only fields needed for export. Unknown fields are ignored.
 type OrdersResponse struct {
-	Orders []struct {
-		ID        string `json:"id"`
-		LegacyID  int    `json:"legacy_id"`
-		Status    string `json:"status"`
-		Rating    any    `json:"rating"`
-		Total     string `json:"total"`
-		CreatedAt string `json:"created_at"`
-		Actions   struct {
-			AddAllItemsToCart struct {
-				Label           string `json:"label"`
-				InProgressLabel string `json:"in_progress_label"`
-				OrderUUID       string `json:"order_uuid"`
-				SourceType      string `json:"source_type"`
-			} `json:"add_all_items_to_cart"`
-			Rating struct {
-				URL   string `json:"url"`
-				Label string `json:"label"`
-			} `json:"rating"`
-			ReportProblem struct {
-				URL   string `json:"url"`
-				Label string `json:"label"`
-			} `json:"report_problem"`
-		} `json:"actions"`
-		OrderDeliveries []struct {
-			ID          string `json:"id"`
-			OrderID     string `json:"order_id"`
-			Description string `json:"description"`
-			Base62ID    string `json:"base62_id"`
-			Status      string `json:"status"`
-			DeliveredAt string `json:"delivered_at"`
-			Retailer    struct {
-				ID   string `json:"id"`
-				Name string `json:"name"`
-				Slug string `json:"slug"`
-				Logo struct {
-					URL        string `json:"url"`
-					Alt        string `json:"alt"`
-					Responsive struct {
-						Template string `json:"template"`
-						Defaults struct {
-							Width int `json:"width"`
-						} `json:"defaults"`
-					} `json:"responsive"`
-					Sizes []any `json:"sizes"`
-				} `json:"logo"`
-				BackgroundColor string `json:"background_color"`
-			} `json:"retailer"`
-			OrderItems []struct {
-				Qty  float64 `json:"qty"`
-				Item struct {
-					ID                      string   `json:"id"`
-					LegacyID                int      `json:"legacy_id"`
-					ProductID               string   `json:"product_id"`
-					Name                    string   `json:"name"`
-					Attributes              []string `json:"attributes"`
-					EbtAttributes           any      `json:"ebt_attributes"`
-					ShowFullBleedImage      any      `json:"show_full_bleed_image"`
-					PriceAffix              any      `json:"price_affix"`
-					PriceAffixAria          any      `json:"price_affix_aria"`
-					SecondaryPriceAffix     string   `json:"secondary_price_affix"`
-					SecondaryPriceAffixAria string   `json:"secondary_price_affix_aria"`
-					Size                    string   `json:"size"`
-					SizeAria                string   `json:"size_aria"`
-					ImageList               []struct {
-						URL        string `json:"url"`
-						Alt        string `json:"alt"`
-						Responsive struct {
-							Template string `json:"template"`
-							Defaults struct {
-								Width  int    `json:"width"`
-								Fill   string `json:"fill"`
-								Format string `json:"format"`
-							} `json:"defaults"`
-						} `json:"responsive"`
-						Sizes []any `json:"sizes"`
-					} `json:"image_list"`
-					Image struct {
-						URL        string `json:"url"`
-						Alt        string `json:"alt"`
-						Responsive struct {
-							Template string `json:"template"`
-							Defaults struct {
-								Width  int    `json:"width"`
-								Fill   string `json:"fill"`
-								Format string `json:"format"`
-							} `json:"defaults"`
-						} `json:"responsive"`
-						Sizes []any `json:"sizes"`
-					} `json:"image"`
-					WeightsAndMeasuresV2Enabled any `json:"weights_and_measures_v2_enabled"`
-					VariableAttributesMap       any `json:"variable_attributes_map"`
-					ProductPagePath             any `json:"product_page_path"`
-					ClickAction                 struct {
-						Type string `json:"type"`
-						Data struct {
-							Container struct {
-								Title            string `json:"title"`
-								Path             string `json:"path"`
-								InitialStep      any    `json:"initial_step"`
-								Modules          []any  `json:"modules"`
-								DataDependencies []any  `json:"data_dependencies"`
-							} `json:"container"`
-							TrackingParams struct {
-							} `json:"tracking_params"`
-							TrackingEventNames struct {
-							} `json:"tracking_event_names"`
-						} `json:"data"`
-					} `json:"click_action"`
-					WineRatingBadge any    `json:"wine_rating_badge"`
-					Weekly          any    `json:"weekly"`
-					WeeklyOrderID   any    `json:"weekly_order_id"`
-					V4ItemID        string `json:"v4_item_id"`
-					QtyAttributes   struct {
-						Initial                  int    `json:"initial"`
-						Increment                int    `json:"increment"`
-						Min                      int    `json:"min"`
-						Max                      int    `json:"max"`
-						Unit                     any    `json:"unit"`
-						UnitAria                 any    `json:"unit_aria"`
-						MaxReachedLabel          string `json:"max_reached_label"`
-						MinReachedLabel          any    `json:"min_reached_label"`
-						MinWeightExp             bool   `json:"min_weight_exp"`
-						HideUnitStepperIcon      bool   `json:"hide_unit_stepper_icon"`
-						QuantityType             any    `json:"quantity_type"`
-						Editable                 bool   `json:"editable"`
-						QtyEnforcedLabel         any    `json:"qty_enforced_label"`
-						VariableWeightDisclaimer any    `json:"variable_weight_disclaimer"`
-						Select                   struct {
-							Options       []int `json:"options"`
-							DefaultOption int   `json:"default_option"`
-							CustomOption  struct {
-								Label string `json:"label"`
-							} `json:"custom_option"`
-						} `json:"select"`
-					} `json:"qty_attributes"`
-					QtyAttributesPerUnit        any `json:"qty_attributes_per_unit"`
-					DeliveryPromotionAttributes any `json:"delivery_promotion_attributes"`
-				} `json:"item"`
-			} `json:"order_items"`
-		} `json:"order_deliveries"`
-	} `json:"orders"`
-	Meta struct {
-		Pagination struct {
-			Total    int `json:"total"`
-			PerPage  int `json:"per_page"`
-			Page     int `json:"page"`
-			NextPage int `json:"next_page"`
-		} `json:"pagination"`
+	Orders []apiOrder `json:"orders"`
+	Meta   struct {
+		Pagination *pagination `json:"pagination"`
 	} `json:"meta"`
+}
+
+type pagination struct {
+	// RawMessage distinguishes a missing next_page from an explicit null terminator.
+	NextPage json.RawMessage `json:"next_page"`
+}
+
+type apiOrder struct {
+	ID              string `json:"id"`
+	Status          string `json:"status"`
+	Total           string `json:"total"`
+	CreatedAt       string `json:"created_at"`
+	OrderDeliveries []struct {
+		DeliveredAt string `json:"delivered_at"`
+		Retailer    struct {
+			Name string `json:"name"`
+		} `json:"retailer"`
+		OrderItems []struct {
+			Qty  float64 `json:"qty"`
+			Item struct {
+				ID        string `json:"id"`
+				ProductID string `json:"product_id"`
+				Name      string `json:"name"`
+			} `json:"item"`
+		} `json:"order_items"`
+	} `json:"order_deliveries"`
 }

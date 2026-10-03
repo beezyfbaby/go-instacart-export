@@ -85,6 +85,9 @@ func decodeHistoryResponse(body []byte) (*DeliveryPage, error) {
 	}
 	if len(envelope.Errors) > 0 {
 		for _, e := range envelope.Errors {
+			if e.Message == "Not Authenticated" || e.Message == "Not Authorized" || e.Extensions.Code == "UNAUTHENTICATED" || e.Extensions.Code == "FORBIDDEN" {
+				return nil, fmt.Errorf("Instacart rejected authentication or authorization; refresh the session cookies from a successful browser request, including __Host-instacart_sid (INSTACART_HOST_SESSION_TOKEN)")
+			}
 			if e.Message == "PersistedQueryNotFound" || e.Extensions.Code == "PERSISTED_QUERY_NOT_FOUND" {
 				return nil, fmt.Errorf("persisted query no longer registered; obtain the current PersonalOrderHistory hash from your browser and use -query-hash")
 			}

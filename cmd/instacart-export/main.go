@@ -45,7 +45,7 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer) error {
 	}
 	ctx, cancel := context.WithTimeout(ctx, *timeout)
 	defer cancel()
-	client := instacart.Client{SessionToken: os.Getenv("INSTACART_SESSION_TOKEN")}
+	client := instacart.Client{SessionToken: os.Getenv("INSTACART_SESSION_TOKEN"), HostSessionToken: os.Getenv("INSTACART_HOST_SESSION_TOKEN")}
 	fmt.Fprintln(stderr, "Fetching orders from the undocumented consumer endpoint...")
 	orders, err := instacart.FetchDeliveryHistory(ctx, client, *queryHash)
 	if err != nil {

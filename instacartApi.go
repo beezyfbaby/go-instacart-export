@@ -14,6 +14,8 @@ import (
 // SessionToken is the value of the _instacart_session_id cookie. Never log it.
 type Client struct {
 	SessionToken string
+	// HostSessionToken is the __Host-instacart_sid cookie observed in browser requests.
+	HostSessionToken string
 	// HTTPClient optionally supplies a transport. Redirects are always rejected.
 	HTTPClient *http.Client
 }
@@ -68,12 +70,21 @@ type apiOrder struct {
 }
 
 func (c *Client) getJSON(ctx context.Context, endpoint string) ([]byte, error) {
-	cookie := &http.Cookie{Name: "_instacart_session_id", Value: c.SessionToken}
-	if c.SessionToken == "" {
-		return nil, fmt.Errorf("INSTACART_SESSION_TOKEN is required")
+	cookies := []*http.Cookie{}
+	for _, cookie := range []*http.Cookie{
+		{Name: "_instacart_session_id", Value: c.SessionToken},
+		{Name: "__Host-instacart_sid", Value: c.HostSessionToken, Path: "/", Secure: true},
+	} {
+		if cookie.Value == "" {
+			continue
+		}
+		if err := cookie.Valid(); err != nil {
+			return nil, fmt.Errorf("invalid %s cookie value", cookie.Name)
+		}
+		cookies = append(cookies, cookie)
 	}
-	if err := cookie.Valid(); err != nil {
-		return nil, fmt.Errorf("invalid session cookie value")
+	if len(cookies) == 0 {
+		return nil, fmt.Errorf("provide INSTACART_HOST_SESSION_TOKEN (__Host-instacart_sid) and/or INSTACART_SESSION_TOKEN (_instacart_session_id)")
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
 	if err != nil {
@@ -83,7 +94,9 @@ func (c *Client) getJSON(ctx context.Context, endpoint string) ([]byte, error) {
 	req.Header.Set("X-Client-Identifier", "web")
 	req.Header.Set("User-Agent", "instacart-export")
 	req.Header.Set("Referer", "https://www.instacart.com/store/account/orders")
-	req.AddCookie(cookie)
+	for _, cookie := range cookies {
+		req.AddCookie(cookie)
+	}
 	client := http.Client{Timeout: 30 * time.Second}
 	if c.HTTPClient != nil {
 		client = *c.HTTPClient

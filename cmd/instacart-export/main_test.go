@@ -53,6 +53,7 @@ func TestFormulaSafety(t *testing.T) {
 }
 func TestCLI(t *testing.T) {
 	t.Setenv("INSTACART_SESSION_TOKEN", "")
+	t.Setenv("INSTACART_HOST_SESSION_TOKEN", "")
 	var out bytes.Buffer
 	if err := run(t.Context(), []string{"-h"}, &out, &out); err != nil {
 		t.Fatal(err)

@@ -8,7 +8,10 @@ Targets Go 1.27.1. The CLI uses the consumer website's `PersonalOrderHistory`
 GraphQL GET request observed on October 3, 2026, with the response parser checked
 against a user-provided page of 10 deliveries. **An authenticated end-to-end run
 has not yet been verified.** Request construction and pagination are tested with
-synthetic responses. Session-cookie authentication may require further adjustment
+synthetic responses. The legacy cookie alone returned Not Authenticated in a live test. Support for
+`__Host-instacart_sid`, observed in the successful browser request, is now added
+alongside `_instacart_session_id`. The required combination is still unverified.
+Session-cookie authentication may require further adjustment
 based on a local run; the client does not bypass browser challenges.
 
 This is an undocumented consumer interface, not the official Instacart Developer
@@ -33,7 +36,10 @@ go build -o instacart-export.exe ./cmd/instacart-export
 ## Run in PowerShell 7
 
 Sign in normally at Instacart. Developer Tools > Application > Cookies >
-https://www.instacart.com contains `_instacart_session_id`. Use its value only.
+https://www.instacart.com contains `__Host-instacart_sid` and
+`_instacart_session_id`. Copy the exact values from the cookies sent in a
+successful PersonalOrderHistory request. Enter both in the prompts below; do not
+replace the variable names or decode percent escapes.
 The prompt below hides input and keeps the value out of command history.
 
 ```powershell
@@ -41,12 +47,13 @@ $goBin = go env GOBIN
 if (-not $goBin) { $goBin = Join-Path (go env GOPATH) 'bin' }
 $exporter = Join-Path $goBin 'instacart-export.exe'
 $destination = Join-Path $PWD ('instacart-deliveries-' + (Get-Date -Format 'yyyyMMdd-HHmmss') + '.csv')
-$env:INSTACART_SESSION_TOKEN = Read-Host 'Instacart session cookie' -MaskInput
+$env:INSTACART_HOST_SESSION_TOKEN = Read-Host '__Host-instacart_sid value' -MaskInput
+$env:INSTACART_SESSION_TOKEN = Read-Host '_instacart_session_id value' -MaskInput
 try {
     & $exporter -output $destination
     if ($LASTEXITCODE -ne 0) { throw 'Export failed. Review the message above.' }
 } finally {
-    Remove-Item Env:INSTACART_SESSION_TOKEN -ErrorAction SilentlyContinue
+    Remove-Item Env:INSTACART_SESSION_TOKEN, Env:INSTACART_HOST_SESSION_TOKEN -ErrorAction SilentlyContinue
 }
 ```
 
@@ -57,10 +64,11 @@ raw HAR files, request headers, or Copy-as-cURL output.
 Bash usage after installing the command:
 
 ```bash
-read -r -s -p 'Instacart session cookie: ' INSTACART_SESSION_TOKEN
-export INSTACART_SESSION_TOKEN
+read -r -s -p '__Host-instacart_sid value: ' INSTACART_HOST_SESSION_TOKEN
+read -r -s -p '_instacart_session_id value: ' INSTACART_SESSION_TOKEN
+export INSTACART_SESSION_TOKEN INSTACART_HOST_SESSION_TOKEN
 instacart-export -output data/deliveries.csv
-unset INSTACART_SESSION_TOKEN
+unset INSTACART_SESSION_TOKEN INSTACART_HOST_SESSION_TOKEN
 ```
 
 Options:
@@ -162,3 +170,12 @@ these public API documents. Public tests contain synthetic data only.
 ## License
 
 [MIT © Rocky Gray](LICENSE)
+
+### Session cookie configuration
+
+`Client.HostSessionToken` maps to `__Host-instacart_sid` and
+`Client.SessionToken` maps to `_instacart_session_id`. Either can be supplied
+alone or both together. The CLI reads `INSTACART_HOST_SESSION_TOKEN` and
+`INSTACART_SESSION_TOKEN`, respectively. Cookies are validated, sent only to the
+fixed HTTPS Instacart endpoints, and never forwarded through redirects. No cookie
+values are logged. Other browser cookies are not collected automatically.

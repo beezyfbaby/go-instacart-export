@@ -1,0 +1,2 @@
+# Keep Go source in the LF format required by gofmt on every platform.
+*.go text eol=lf

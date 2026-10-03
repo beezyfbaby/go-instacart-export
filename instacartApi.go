@@ -20,51 +20,9 @@ type Client struct {
 
 func (c *Client) getPage(ctx context.Context, page int) (OrdersResponse, error) {
 	var result OrdersResponse
-	cookie := &http.Cookie{Name: "_instacart_session_id", Value: c.SessionToken}
-	if c.SessionToken == "" {
-		return result, fmt.Errorf("INSTACART_SESSION_TOKEN is required")
-	}
-	if err := cookie.Valid(); err != nil {
-		return result, fmt.Errorf("invalid session cookie value")
-	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://www.instacart.com/v3/orders?page="+strconv.Itoa(page), nil)
+	body, err := c.getJSON(ctx, "https://www.instacart.com/v3/orders?page="+strconv.Itoa(page))
 	if err != nil {
 		return result, err
-	}
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("X-Client-Identifier", "web")
-	req.Header.Set("User-Agent", "instacart-export")
-	req.Header.Set("Referer", "https://www.instacart.com/store/account/orders")
-	req.AddCookie(cookie)
-	client := http.Client{Timeout: 30 * time.Second}
-	if c.HTTPClient != nil {
-		client = *c.HTTPClient
-	}
-	if client.Timeout <= 0 {
-		client.Timeout = 30 * time.Second
-	}
-	client.CheckRedirect = func(_ *http.Request, _ []*http.Request) error { return http.ErrUseLastResponse }
-	resp, err := client.Do(req)
-	if err != nil {
-		return result, fmt.Errorf("request orders page: %w", err)
-	}
-	defer resp.Body.Close()
-	switch resp.StatusCode {
-	case http.StatusOK:
-	case http.StatusUnauthorized, http.StatusForbidden:
-		return result, fmt.Errorf("HTTP %d: session expired or access blocked; sign in normally and refresh your session cookie", resp.StatusCode)
-	case http.StatusTooManyRequests:
-		return result, fmt.Errorf("HTTP 429: rate limited; wait before running again (Retry-After: %q)", resp.Header.Get("Retry-After"))
-	default:
-		return result, fmt.Errorf("HTTP %d: consumer orders endpoint unavailable or changed", resp.StatusCode)
-	}
-	const limit = 16 << 20
-	body, err := io.ReadAll(io.LimitReader(resp.Body, limit+1))
-	if err != nil {
-		return result, fmt.Errorf("read orders: %w", err)
-	}
-	if len(body) > limit {
-		return result, fmt.Errorf("orders response exceeds 16 MiB")
 	}
 	if err := json.Unmarshal(body, &result); err != nil {
 		return result, fmt.Errorf("unexpected orders JSON; consumer API may have changed: %w", err)
@@ -107,4 +65,55 @@ type apiOrder struct {
 			} `json:"item"`
 		} `json:"order_items"`
 	} `json:"order_deliveries"`
+}
+
+func (c *Client) getJSON(ctx context.Context, endpoint string) ([]byte, error) {
+	cookie := &http.Cookie{Name: "_instacart_session_id", Value: c.SessionToken}
+	if c.SessionToken == "" {
+		return nil, fmt.Errorf("INSTACART_SESSION_TOKEN is required")
+	}
+	if err := cookie.Valid(); err != nil {
+		return nil, fmt.Errorf("invalid session cookie value")
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("X-Client-Identifier", "web")
+	req.Header.Set("User-Agent", "instacart-export")
+	req.Header.Set("Referer", "https://www.instacart.com/store/account/orders")
+	req.AddCookie(cookie)
+	client := http.Client{Timeout: 30 * time.Second}
+	if c.HTTPClient != nil {
+		client = *c.HTTPClient
+	}
+	if client.Timeout <= 0 {
+		client.Timeout = 30 * time.Second
+	}
+	client.CheckRedirect = func(_ *http.Request, _ []*http.Request) error { return http.ErrUseLastResponse }
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("request orders page: %w", err)
+	}
+	defer resp.Body.Close()
+	switch resp.StatusCode {
+	case http.StatusOK:
+	case http.StatusUnauthorized, http.StatusForbidden:
+		return nil, fmt.Errorf("HTTP %d: session expired or access blocked; sign in normally and refresh your session cookie", resp.StatusCode)
+	case http.StatusTooManyRequests:
+		return nil, fmt.Errorf("HTTP 429: rate limited; wait before running again (Retry-After: %q)", resp.Header.Get("Retry-After"))
+	default:
+		return nil, fmt.Errorf("HTTP %d: consumer orders endpoint unavailable or changed", resp.StatusCode)
+	}
+	const limit = 16 << 20
+	body, err := io.ReadAll(io.LimitReader(resp.Body, limit+1))
+	if err != nil {
+		return nil, fmt.Errorf("read orders: %w", err)
+	}
+	if len(body) > limit {
+		return nil, fmt.Errorf("orders response exceeds 16 MiB")
+	}
+
+	return body, nil
 }

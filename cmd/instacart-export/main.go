@@ -28,7 +28,8 @@ func main() {
 func run(ctx context.Context, args []string, stdout, stderr io.Writer) error {
 	flags := flag.NewFlagSet("instacart-export", flag.ContinueOnError)
 	flags.SetOutput(stderr)
-	output := flags.String("output", filepath.Join("data", "instacart_orders_"+time.Now().Format("2006-01-02_15-04-05.000000000")+".csv"), "CSV destination (must not already exist)")
+	output := flags.String("output", filepath.Join("data", "instacart_deliveries_"+time.Now().Format("2006-01-02_15-04-05.000000000")+".csv"), "CSV destination (must not already exist)")
+	queryHash := flags.String("query-hash", instacart.PersonalOrderHistoryHash, "PersonalOrderHistory persisted-query SHA-256 hash")
 	timeout := flags.Duration("timeout", 5*time.Minute, "maximum time for entire export")
 	if err := flags.Parse(args); err != nil {
 		if err == flag.ErrHelp {
@@ -46,14 +47,14 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer) error {
 	defer cancel()
 	client := instacart.Client{SessionToken: os.Getenv("INSTACART_SESSION_TOKEN")}
 	fmt.Fprintln(stderr, "Fetching orders from the undocumented consumer endpoint...")
-	orders, err := instacart.FetchOrders(ctx, client)
+	orders, err := instacart.FetchDeliveryHistory(ctx, client, *queryHash)
 	if err != nil {
 		return err
 	}
-	if err := writeToCSV(*output, extractOrdersData(orders)); err != nil {
+	if err := writeToCSV(*output, extractDeliveryData(orders)); err != nil {
 		return err
 	}
-	_, err = fmt.Fprintf(stdout, "Exported %d orders to %s\n", len(orders), *output)
+	_, err = fmt.Fprintf(stdout, "Exported %d deliveries to %s\n", len(orders), *output)
 	return err
 }
 
@@ -106,4 +107,17 @@ func writeToCSV(path string, data [][]string) (err error) {
 		return err
 	}
 	return file.Sync()
+}
+
+// Each row represents a delivery. Do not merge or sum multi-order totals.
+func extractDeliveryData(deliveries []instacart.HistoryDelivery) [][]string {
+	data := [][]string{{"deliveryId", "orderId", "status", "deliveryTotal", "createdAt", "retailer", "numItemLines", "isMulti", "serviceType"}}
+	for _, d := range deliveries {
+		row := []string{d.ID, d.OrderID, d.Status, d.Total, d.CreatedAt.Format(time.RFC3339Nano), d.Retailer, strconv.Itoa(len(d.Items)), strconv.FormatBool(d.IsMulti), d.ServiceType}
+		for i := range row {
+			row[i] = spreadsheetSafe(row[i])
+		}
+		data = append(data, row)
+	}
+	return data
 }

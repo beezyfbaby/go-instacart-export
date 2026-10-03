@@ -1,168 +1,164 @@
 # Instacart CSV Export
 
-Export personal Instacart order history to CSV using a Go command-line tool.
+Export personal Instacart delivery history to CSV using Go.
 
 ## Compatibility status
 
-**Go modernization is tested with Go 1.27.1. Live Instacart compatibility is NOT verified.**
+Targets Go 1.27.1. The CLI uses the consumer website's `PersonalOrderHistory`
+GraphQL GET request observed on October 3, 2026, with the response parser checked
+against a user-provided page of 10 deliveries. **An authenticated end-to-end run
+has not yet been verified.** Request construction and pagination are tested with
+synthetic responses. Session-cookie authentication may require further adjustment
+based on a local run; the client does not bypass browser challenges.
 
-This project uses the undocumented consumer website endpoint
-`https://www.instacart.com/v3/orders`, authenticated by a browser session cookie.
-It does **not** use the official Instacart Developer Platform API. The public
-Developer Platform documentation reviewed on October 3, 2026 does not provide a
-replacement for exporting a consumer's full personal order history. Its API key
-cannot replace this tool's session cookie. Retailer Connect integrations are a
-different product and are not a drop-in replacement either.
+This is an undocumented consumer interface, not the official Instacart Developer
+Platform API. Developer Platform API keys cannot replace the browser session
+cookie. The website's query hash or schema can change independently of this tool.
 
-Do not interpret successful unit tests as confirmation that the current website
-still accepts this endpoint or returns this schema. A live smoke test with your
-own account is required. If Instacart changed its endpoint, authentication, or
-response format, the tool stops with an error rather than silently exporting an
-empty report. It does not bypass login challenges or access restrictions.
+## Install the draft version
 
-References:
-- [Go downloads](https://go.dev/dl/)
-- [Instacart Developer Platform API](https://docs.instacart.com/developer_platform_api/api/overview/)
-- [Instacart Developer Platform FAQ](https://docs.instacart.com/developer_platform_api/faq/)
-- [Instacart Connect APIs](https://docs.instacart.com/connect/api/)
+Install [Go 1.27.1 or newer](https://go.dev/dl/). In PowerShell:
 
-## Build and install
-
-Install [Go 1.27.1 or newer](https://go.dev/dl/). From this checkout:
-
-```sh
-go build -o instacart-export ./cmd/instacart-export
+```powershell
+go install github.com/beezyfbaby/go-instacart-export/cmd/instacart-export@modernize-go-exporter
+if ($LASTEXITCODE -ne 0) { throw 'Installation failed' }
 ```
 
-On Windows PowerShell:
+From a local checkout, build with:
 
 ```powershell
 go build -o instacart-export.exe ./cmd/instacart-export
 ```
 
-After the changes have been merged into the default branch, install directly:
+## Run in PowerShell 7
 
-```sh
-go install github.com/beezyfbaby/go-instacart-export/cmd/instacart-export@main
-```
-
-## Usage
-
-Sign in to Instacart normally in your browser. In Developer Tools, inspect the
-`_instacart_session_id` cookie for `www.instacart.com`. Use only its value, not a
-whole Cookie header. Keep it private. Do not paste it into issues, chat, commits,
-or screenshots. Session cookies grant account access.
-
-For PowerShell 7, enter it without displaying it or saving it in command history:
+Sign in normally at Instacart. Developer Tools > Application > Cookies >
+https://www.instacart.com contains `_instacart_session_id`. Use its value only.
+The prompt below hides input and keeps the value out of command history.
 
 ```powershell
+$goBin = go env GOBIN
+if (-not $goBin) { $goBin = Join-Path (go env GOPATH) 'bin' }
+$exporter = Join-Path $goBin 'instacart-export.exe'
+$destination = Join-Path $PWD ('instacart-deliveries-' + (Get-Date -Format 'yyyyMMdd-HHmmss') + '.csv')
 $env:INSTACART_SESSION_TOKEN = Read-Host 'Instacart session cookie' -MaskInput
 try {
-    .\instacart-export.exe -output .\data\orders.csv
+    & $exporter -output $destination
+    if ($LASTEXITCODE -ne 0) { throw 'Export failed. Review the message above.' }
 } finally {
-    Remove-Item Env:INSTACART_SESSION_TOKEN
+    Remove-Item Env:INSTACART_SESSION_TOKEN -ErrorAction SilentlyContinue
 }
 ```
 
-For Bash:
+For a locally built binary, use `.\instacart-export.exe` as `$exporter`.
+Keep cookies and receipt links containing access tokens private. Do not share
+raw HAR files, request headers, or Copy-as-cURL output.
+
+Bash usage after installing the command:
 
 ```bash
 read -r -s -p 'Instacart session cookie: ' INSTACART_SESSION_TOKEN
 export INSTACART_SESSION_TOKEN
-./instacart-export -output data/orders.csv
+instacart-export -output data/deliveries.csv
 unset INSTACART_SESSION_TOKEN
 ```
 
 Options:
-- `-output`: destination file, default `data/instacart_orders_<timestamp>.csv`.
-  Existing files are never overwritten. Use a new filename for each run.
-- `-timeout`: maximum duration for the entire export, default `5m`.
+- `-output`: destination CSV; existing files are never overwritten.
+- `-timeout`: maximum time for the complete export (default `5m`).
+- `-query-hash`: override the observed PersonalOrderHistory SHA-256 query hash.
 - `-h`: help.
 
-The HTTP client also has a 30-second per-request timeout. Ctrl+C cancels the run.
-CSV output is written only after all pages have been fetched and validated.
-Output files use owner-only permissions where the OS supports Unix permissions;
-on Windows, protect the directory with your account's normal access controls.
+Requests time out after 30 seconds each. Ctrl+C cancels the export. Files are
+written only after every page has been retrieved and validated. Owner-only Unix
+permissions are requested; Windows directory access follows its existing ACLs.
 
-## CSV fields
+## CSV schema
+
+**One row per delivery, not per parent order.** This intentionally changes the
+old order-level CSV to avoid presenting a delivery total as a whole-order total.
 
 | Field | Meaning |
 | --- | --- |
-| id | Order ID |
-| status | Order status |
-| total | Original total string, without floating-point conversion |
-| createdAt | Order date, YYYY-MM-DD |
-| retailers | Retailer names separated by a pipe |
-| numItems | Number of item lines across deliveries, not sum of quantities |
+| deliveryId | Unique delivery ID |
+| orderId | Parent legacy order ID; may occur on several rows |
+| status | Workflow state returned by Instacart |
+| deliveryTotal | Original displayed delivery total, including currency formatting |
+| createdAt | RFC 3339 timestamp, preserving the response's time zone |
+| retailer | Retailer name |
+| numItemLines | Number of returned item lines; not purchased unit quantity |
+| isMulti | Multi-delivery indicator from the response |
+| serviceType | Delivery/pickup classification from the response |
 
-Orders are newest first. Formula-like cell values receive a leading apostrophe
-for spreadsheet safety. Fractional item quantities are preserved in the Go model.
-Timestamps support RFC 3339, date-only, and the original English website format.
-Website timestamps without a time zone are treated as UTC; date-only CSV output
-retains their calendar date.
+Newest deliveries appear first. Formula-like text is prefixed with an apostrophe
+for spreadsheet safety. Receipt URLs/access tokens are discarded. The observed
+history response does not provide purchased quantities, so none are invented.
+Multi-delivery totals are not combined; verify their accounting meaning against
+receipts before aggregating expenses.
 
-## Troubleshooting and live verification
+## How requests work
 
-1. Run with a fresh session cookie and a new output filename.
-2. Compare the exported order count, newest/oldest dates, and several totals
-   against your browser's order history.
-3. `401`/`403` or redirect: sign in normally again. If access is still blocked,
-   stop; this client cannot resolve browser challenges.
-4. `429`: wait before trying again; the error reports `Retry-After` when supplied.
-5. Unexpected JSON, missing fields, or `404`: the private interface may have
-   changed. Do not guess a version number or substitute a Developer API key.
-   For an adapter update, provide the request URL/method and a **redacted response
-   JSON** from an orders request in Developer Tools. Remove names, addresses,
-   payment data, cookies, tokens, and other identifying data. Do not share a raw HAR.
+`GET https://www.instacart.com/graphql` with:
+- `operationName=PersonalOrderHistory`
+- `variables={"first":10}` initially, omitting the optional cursor
+- `variables={"first":10,"after":"<previous endCursor>"}` subsequently
+- `extensions={"persistedQuery":{"version":1,"sha256Hash":"<hash>"}}`
 
-Pagination currently requires an `orders` array and
-`meta.pagination.next_page` with an integer page number, `0`, or `null`. Missing
-pagination is treated as an error to avoid silently exporting only one page.
-Repeated/backward pages, duplicate order IDs, and empty advancing pages fail
-explicitly. No partial results are returned on failure.
+The initial request's omitted cursor is a conventional first-page assumption
+that still requires live verification. Subsequent request parameters match the
+captured browser request. The observed query identifier is stored in
+`PersonalOrderHistoryHash`. A query hash identifies a registered query; it is not
+a credential. No personal order cursor is hard-coded.
 
-## Development
+The response must contain exactly one `orderDeliveriesConnection` under `data`.
+Its `nodes` and `pageInfo` are validated. Pagination ends only when
+`hasNextPage=false`. Repeated cursors, duplicate delivery IDs, empty advancing
+pages, missing fields, and GraphQL errors fail without returning a partial export.
+Any GraphQL errors cause failure even if partial `data` accompanies them.
+
+## Local smoke test and troubleshooting
+
+1. Run with a fresh session cookie and a new destination filename.
+2. Compare row count, oldest/newest dates, and totals against browser history.
+   Count deliveries separately from parent orders. Check more than the first 10.
+3. If you get `401`/`403` or a redirect, sign in normally again. If still blocked,
+   report the error without credentials. Additional authentication requirements
+   have not been verified; this client does not bypass access restrictions.
+4. For `429`, wait before retrying. The error reports `Retry-After` if present.
+5. For `PersistedQueryNotFound`, obtain the current hash from a successful
+   PersonalOrderHistory request in Developer Tools and pass `-query-hash`.
+6. For other GraphQL/schema errors, supply the sanitized response and request
+   parameters. A changed first-page contract or missing fields needs a parser or
+   request update, not a guessed API version.
+
+## Development and library API
 
 ```sh
-go test -race ./...
+go test -race -cover ./...
 go vet ./...
 go build ./cmd/instacart-export
 ```
 
-Tests use synthetic HTTP responses and cover pagination, schema changes,
-authentication errors, cancellation, fractional quantities, CSV escaping,
-formula safety, and overwrite protection. CI runs on Linux, Windows, and macOS.
-GoReleaser configuration uses version 2; run `goreleaser check` before releasing.
+CI runs Go checks on Linux, Windows, and macOS. GoReleaser uses configuration v2
+and retains checksum signing; a release needs an appropriately configured signer.
 
-### Library API changes
+Use `FetchDeliveryHistory(ctx, client, hash)` for the current consumer integration.
+An empty hash selects the default. `DecodeDeliveryPage` accepts the connection
+object itself and is also available for offline parsing.
 
-`FetchOrders` now takes a context and returns an error:
+Legacy `FetchOrders(ctx, client)` and `Order` models remain for library callers,
+but use the old unverified `/v3/orders` endpoint; the CLI no longer calls them.
+Legacy `FetchOrders` now returns an error and legacy `Item.Quantity` is float64.
 
-```go
-orders, err := instacart.FetchOrders(ctx, instacart.Client{SessionToken: token})
-```
+## References
 
-Handle `err` before using `orders`. `Item.Quantity` is now `float64`, preserving
-weighted-item quantities. The response model includes only fields used by the
-exporter, avoiding failures caused by irrelevant website UI schema changes.
+- [Go downloads](https://go.dev/dl/)
+- [Instacart Developer Platform](https://docs.instacart.com/developer_platform_api/api/overview/)
+- [Instacart Connect](https://docs.instacart.com/connect/api/)
+
+The consumer request and schema come from user-provided browser captures, not
+these public API documents. Public tests contain synthetic data only.
 
 ## License
 
 [MIT © Rocky Gray](LICENSE)
-
-### Current consumer response parser
-
-`DecodeDeliveryPage` now supports the observed `orderDeliveriesConnection`
-object from the website's embedded `node-apollo-state` cache. Pass the connection
-object itself (`nodes` and `pageInfo`), not a partial text excerpt or the entire
-HTML document. It returns delivery-level records with their parent order IDs,
-retailer, status, timestamp, displayed total, and item metadata. It preserves
-`isMulti` rather than combining delivery totals into an assumed order total.
-Receipt links and access tokens are discarded. Purchased item quantities are
-absent from this response and are not inferred.
-
-This parser is not yet wired to the CLI or a GraphQL transport. The CLI still uses
-the legacy endpoint described above. A captured next-page request is required to
-confirm the operation name, variables, and persisted-query information. Pagination
-uses `pageInfo.endCursor` and `pageInfo.hasNextPage`; a first-page snapshot must not
-be presented as a complete export when `hasNextPage` is true.

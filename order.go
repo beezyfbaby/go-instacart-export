@@ -6,11 +6,11 @@ import "time"
 type Item struct {
 	ID        string
 	ProductID string
-	Quantity  int
+	Quantity  float64
 	Name      string
 }
 
-// Delivery is a purhcase at a particular retailer.
+// Delivery is a purchase at a particular retailer.
 type Delivery struct {
 	Retailer    string
 	DeliveredAt time.Time
@@ -24,15 +24,4 @@ type Order struct {
 	Total      string
 	CreatedAt  time.Time
 	Deliveries []*Delivery
-}
-
-type sortOrders []*Order
-
-func (o sortOrders) Len() int      { return len(o) }
-func (o sortOrders) Swap(i, j int) { o[i], o[j] = o[j], o[i] }
-
-type sortOrderByDate struct{ sortOrders }
-
-func (o sortOrderByDate) Less(i, j int) bool {
-	return o.sortOrders[i].CreatedAt.Before(o.sortOrders[j].CreatedAt)
 }

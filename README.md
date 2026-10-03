@@ -149,3 +149,20 @@ exporter, avoiding failures caused by irrelevant website UI schema changes.
 ## License
 
 [MIT © Rocky Gray](LICENSE)
+
+### Current consumer response parser
+
+`DecodeDeliveryPage` now supports the observed `orderDeliveriesConnection`
+object from the website's embedded `node-apollo-state` cache. Pass the connection
+object itself (`nodes` and `pageInfo`), not a partial text excerpt or the entire
+HTML document. It returns delivery-level records with their parent order IDs,
+retailer, status, timestamp, displayed total, and item metadata. It preserves
+`isMulti` rather than combining delivery totals into an assumed order total.
+Receipt links and access tokens are discarded. Purchased item quantities are
+absent from this response and are not inferred.
+
+This parser is not yet wired to the CLI or a GraphQL transport. The CLI still uses
+the legacy endpoint described above. A captured next-page request is required to
+confirm the operation name, variables, and persisted-query information. Pagination
+uses `pageInfo.endCursor` and `pageInfo.hasNextPage`; a first-page snapshot must not
+be presented as a complete export when `hasNextPage` is true.

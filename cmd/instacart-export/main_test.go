@@ -3,7 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/csv"
-	instacart "github.com/beezyfbaby/go-instacart-export"
+	instacart "github.com/tyang27/go-instacart-export"
 	"io"
 	"net/http"
 	"os"

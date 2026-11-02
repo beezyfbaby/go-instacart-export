@@ -23,7 +23,7 @@ cookie. The website's query hash or schema can change independently of this tool
 Install [Go 1.27.1 or newer](https://go.dev/dl/). In PowerShell:
 
 ```powershell
-go install github.com/beezyfbaby/go-instacart-export/cmd/instacart-export@modernize-go-exporter
+go install github.com/tyang27/go-instacart-export/cmd/instacart-export@main
 if ($LASTEXITCODE -ne 0) { throw 'Installation failed' }
 ```
 

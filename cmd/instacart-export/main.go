@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	instacart "github.com/beezyfbaby/go-instacart-export"
+	instacart "github.com/tyang27/go-instacart-export"
 )
 
 func main() {

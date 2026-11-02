@@ -1,4 +1,4 @@
-module github.com/beezyfbaby/go-instacart-export
+module github.com/tyang27/go-instacart-export
 
 go 1.27.0
 
